@@ -1,0 +1,9 @@
+.venv/
+data/
+*.zip
+__pycache__/
+*.pyc
+
+# Model weights
+work/weights/
+*.pt
