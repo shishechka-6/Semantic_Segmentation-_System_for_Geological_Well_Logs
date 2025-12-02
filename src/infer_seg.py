@@ -50,21 +50,16 @@ def predict_with_tta(model, arr_pad, device):
 
     with torch.no_grad():
         x = _prep(arr_pad)  
-
-        # 1) оригинал
         l1 = model(x)
 
-        # 2) горизонтальный флип
         x_h = torch.flip(x, dims=[3])
         l2 = model(x_h)
         l2 = torch.flip(l2, dims=[3])
 
-        # 3) вертикальный флип
         x_v = torch.flip(x, dims=[2])
         l3 = model(x_v)
         l3 = torch.flip(l3, dims=[2])
 
-        # 4) оба флипа
         x_hv = torch.flip(x, dims=[2, 3])
         l4 = model(x_hv)
         l4 = torch.flip(l4, dims=[2, 3])
@@ -78,7 +73,6 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    # пути относительно корня проекта
     test_paths = sorted(glob("data/test_images/*.png"))
     checkpoint_path = "work/weights/seg_best.pt"
     out_dir = "work/runs"
@@ -92,7 +86,6 @@ def main():
 
     os.makedirs(out_dir, exist_ok=True)
 
-    # модель (как при обучении)
     num_classes = 40
     model = smp.DeepLabV3Plus(
         encoder_name="resnet50",
@@ -104,14 +97,14 @@ def main():
     print("Loading checkpoint:", checkpoint_path)
     ind_to_tone = load_checkpoint(model, checkpoint_path, device)
 
-    # инференс
+    
     for img_path in test_paths:
         print("Predicting:", img_path)
         img = Image.open(img_path).convert("RGB")
         arr = np.array(img)  # (H, W, 3)
         H, W = arr.shape[:2]
 
-        # паддинг до кратности 16
+  
         pad_h = (16 - H % 16) % 16
         pad_w = (16 - W % 16) % 16
         if pad_h > 0 or pad_w > 0:
@@ -124,16 +117,14 @@ def main():
         else:
             arr_pad = arr
 
-        # предсказание с TTA
+    
         pred_pad = predict_with_tta(model, arr_pad, device)  # (H_pad, W_pad)
 
-        # убираем паддинг
+    
         pred = pred_pad[:H, :W]
 
-        # локально заполняем мелкие чёрные дырки (фон = класс 0)
         pred_filled = fill_small_gaps(pred, bg_class=0)
 
-        # индексы классов -> оттенки серого
         out_arr = tone_map_restore(pred_filled, ind_to_tone)
         out_img = Image.fromarray(out_arr, mode="L")
 
@@ -142,7 +133,6 @@ def main():
 
     print("Готово, маски лежат в", out_dir)
 
-    # собираем архив для отправки
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for png_path in sorted(glob(os.path.join(out_dir, "*.png"))):
             zf.write(png_path, arcname=os.path.basename(png_path))
