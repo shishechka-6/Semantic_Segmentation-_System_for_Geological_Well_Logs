@@ -6,6 +6,13 @@
 
 ---
 
+## 🖼️ Example
+
+| Input | Segmentation |
+|-------|--------------|
+| <img src="examples/0.png" width="300"/> | <img src="examples/0pr.png" width="300"/> |
+
+
 ## 🧰 Стек проекта
 
 - **PyTorch**
